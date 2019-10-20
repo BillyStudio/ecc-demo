@@ -1,3 +1,4 @@
+#include <bits/stdc++.h>
 #include <NTL/ZZ_p.h>
 
 using namespace std;
@@ -17,18 +18,12 @@ void add(Vec<ZZ_p>& x, const Vec<ZZ_p>& a, const Vec<ZZ_p>& b)
 int main(int argc, char *argv[])
 {
     Vec<ZZ_p> a, b, res;
-    ZZ_p in = ZZ_p();
-
-    for (int i=0; i<3; ++i) {
-        cin >> in;
-        cout << in << endl;
-        a.append(in);
-        b.append(in);
-    }
+    ZZ_p in = ZZ_p(5);
+    cout << in << endl;
     
-    cout << a << endl;
-    cin >> b;
-    cout << b << endl;
-    add(res, a, b);
+    // cout << a << endl;
+    // cin >> b;
+    // cout << b << endl;
+    // add(res, a, b);
     return 0;
 }
