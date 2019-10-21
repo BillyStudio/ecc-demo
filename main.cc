@@ -5,15 +5,24 @@ using namespace NTL;
 
 void Point::Zero() {
     x = 0;
-    y_bit = 0;
+    y = 0;
 }
 
-ECC::ECC(ZZ _p, ZZ _a, ZZ _b) : p(_p), a(_a), b(_b) {
+ECC::ECC(ZZ _p, long _a, long _b) : p(_p), a(_a), b(_b) {
     factors.SetMaxLength(4);
-    long long_a;
-    conv(long_a, a);
-    SetCoeff(factors, long(0), long_a);
+    SetCoeff(factors, long(0), _b);
+    SetCoeff(factors, long(1), _a);
+    SetCoeff(factors, long(2), long(0));
+    SetCoeff(factors, long(3));
+}
 
+int ECC::setBasePoint(const ZZ x, const ZZ y) {
+    if (checkPoint(x, y) == true) {
+        G.x = x;
+        G.y = y;
+        return 0;
+    }
+    return -1;
 }
 
 int ECC::setBasePoint(const Point& base_P) {
@@ -24,9 +33,23 @@ int ECC::setBasePoint(const Point& base_P) {
 }
 
 bool ECC::checkPoint(const ZZ x, const ZZ y) {
-    if (y == calc_poly(factors, x))
+    cout << "x = " << x << ", f(x)=" << calc_poly(factors, x) << ", y=" << y << endl;
+    if (y*y%GF == calc_poly(factors, x))
         return true;
     return false;
+}
+
+ZZ ECC::calc_poly(ZZ_pX factors, ZZ x)
+{
+    ZZ res;
+    res = 0;
+
+    for (long i=0; i<factors.rep.length(); i++){
+        ZZ_p item = factors[i];
+        res += item._ZZ_p__rep * PowerMod(x, i, GF);
+    }
+
+    return res % GF;
 }
 
 Point MulPoint(long k, const Point& G)
@@ -93,22 +116,14 @@ ZZ conv_str2num(unsigned char* str, size_t n_bytes) {
     return res;
 }
 
-ZZ calc_poly(ZZ_pX factors, ZZ x)
-{
-    ZZ res;
-    res = 0;
-
-    for (long i=0; i<factors.rep.length(); i++){
-        ZZ_p item = factors[i];
-        res += item._ZZ_p__rep * PowerMod(x, i, GF);
-    }
-
-    return res;
-}
-
 int main()
 {
     ZZ_p::init(GF);
     long a = 13, b = 22;
     ECC example = ECC(GF, a, b);
+    if (example.setBasePoint(ZZ(10), ZZ(5)) == 0) {
+        cout << "set true" << endl;
+    } else {
+        cout << "set false" << endl;
+    }
 }

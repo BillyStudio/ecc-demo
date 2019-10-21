@@ -9,7 +9,7 @@ const NTL::ZZ GF = NTL::ZZ(23);
 
 typedef struct Point {
     NTL::ZZ x;
-    unsigned char y_bit;
+    //unsigned char y_bit;
     NTL::ZZ y;
     void Zero();
     Point operator+(const Point& b) {
@@ -22,14 +22,16 @@ typedef struct Point {
 
 class ECC {
 public:
-    ECC(NTL::ZZ p, NTL::ZZ a, NTL::ZZ b);
+    ECC(NTL::ZZ p, long a, long b);
     int setBasePoint(const Point& G);
+    int setBasePoint(const NTL::ZZ x, const NTL::ZZ y);
 private:
     NTL::ZZ p, a, b;
     Point G;
     NTL::ZZ_pX factors;
-    bool checkPoint(const NTL::ZZ x, const NTL::ZZ y);
     ECC();
+    bool checkPoint(const NTL::ZZ x, const NTL::ZZ y);
+    NTL::ZZ calc_poly(NTL::ZZ_pX factors, NTL::ZZ x);
 };
 
 #endif
