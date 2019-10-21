@@ -1,26 +1,32 @@
-#include <NTL/ZZ.h>
-#include <NTL/ZZ_pXFactoring.h>
+#include <ecc.h>
 
 using namespace std;
 using namespace NTL;
 
-const ZZ GF = ZZ(23);
-
-typedef struct Point {
-    ZZ x;
-    unsigned char y_bit;
-    void Zero();
-    Point operator+(const Point& b) {
-        Point sum_P;
-        long lamb;
-        sum_P.x = this->x + b.x;
-        return sum_P;
-    }
-} Point;
-
 void Point::Zero() {
     x = 0;
     y_bit = 0;
+}
+
+ECC::ECC(ZZ _p, ZZ _a, ZZ _b) : p(_p), a(_a), b(_b) {
+    factors.SetMaxLength(4);
+    long long_a;
+    conv(long_a, a);
+    SetCoeff(factors, long(0), long_a);
+
+}
+
+int ECC::setBasePoint(const Point& base_P) {
+    if (checkPoint(base_P.x, base_P.y) == true) {
+        G = base_P;
+    }
+    return 0;
+}
+
+bool ECC::checkPoint(const ZZ x, const ZZ y) {
+    if (y == calc_poly(factors, x))
+        return true;
+    return false;
 }
 
 Point MulPoint(long k, const Point& G)
