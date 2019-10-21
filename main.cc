@@ -1,12 +1,7 @@
-#include <ecc.h>
+#include "ecc.h"
 
 using namespace std;
 using namespace NTL;
-
-void Point::Zero() {
-    x = 0;
-    y = 0;
-}
 
 ECC::ECC(ZZ _p, long _a, long _b) : p(_p), a(_a), b(_b) {
     factors.SetMaxLength(4);
@@ -28,8 +23,9 @@ int ECC::setBasePoint(const ZZ x, const ZZ y) {
 int ECC::setBasePoint(const Point& base_P) {
     if (checkPoint(base_P.x, base_P.y) == true) {
         G = base_P;
+        return 0;
     }
-    return 0;
+    return -1;
 }
 
 bool ECC::checkPoint(const ZZ x, const ZZ y) {
@@ -48,11 +44,30 @@ ZZ ECC::calc_poly(ZZ_pX factors, ZZ x)
         ZZ_p item = factors[i];
         res += item._ZZ_p__rep * PowerMod(x, i, GF);
     }
-
     return res % GF;
 }
 
-Point MulPoint(long k, const Point& G)
+Point ECC::doublePoint(const Point& G) {
+    Point add_sum;
+    ZZ lambda;
+    lambda = (3*G.x*G.x+a) * InvMod(2*G.y, GF) % GF;
+    add_sum.x = (lambda*lambda - 2*G.x) % GF;
+    add_sum.y = (lambda * (G.x - add_sum.x) - G.y) % GF; 
+    return add_sum;
+}
+
+Point ECC::addPoint(Point A, Point B) {
+    Point add_P;
+    ZZ lambda;
+    if (A.x == B.x) return doublePoint(A);
+    if (A.x > B.x) {add_P = A; A = B; B=add_P;}
+    lambda = (B.y - A.y) * InvMod(B.x - A.x, GF) % GF;
+    add_P.x = (lambda*lambda - A.x - B.x) % GF;
+    add_P.y = (lambda*(A.x-add_P.x) - add_P.y) % GF;
+    return add_P;
+}
+
+Point ECC::mulPoint(long k, const Point& G)
 {
     Point kG;
     long i;
@@ -61,21 +76,10 @@ Point MulPoint(long k, const Point& G)
     if (k == 0) return kG;
 
     long max_loop = NumBits(k);
-    Point dynamic[max_loop];
-    for (i=0; i<max_loop; ++i) {
-        if (i > 0) {
-            dynamic[i] = dynamic[i-1] + dynamic[i-1];
-        } else {
-            dynamic[0] = G;
-        }
-    }
-
-    i = 0;
-    while (k > 0) {
-        if (k&1) {
-            kG = kG + dynamic[i];
-        }
-        k >>= 1;
+    kG = G;
+    for (i=k-1; i>=0; --i) {
+        kG = doublePoint(kG);
+        if (bit(k, i) == 1) kG = addPoint(kG, G);
     }
 
     return kG;
@@ -100,29 +104,48 @@ unsigned char *conv_num2str(ZZ num, size_t n_bytes) {
     return res;
 }
 
-ZZ conv_str2num(unsigned char* str, size_t n_bytes) {
-    ZZ res;
-    long byte;
+// ZZ conv_str2num(unsigned char* str, size_t n_bytes) {
+//     ZZ res;
+//     long byte;
 
-    res = 0;
-    for (byte=0; byte<n_bytes; ++byte) {
-        ZZ temp;
-        for (int i=0; i<8; ++i) {
-            temp = temp + (str[byte] | (1<<i));
-        }
-        res = res + temp;
-        res = res << long(1<<8);
-    }
-    return res;
-}
+//     res = 0;
+//     for (byte=0; byte<n_bytes; ++byte) {
+//         ZZ temp;
+//         for (int i=0; i<8; ++i) {
+//             temp = temp + (str[byte] | (1<<i));
+//         }
+//         res = res + temp;
+//         res = res << long(1<<8);
+//     }
+//     return res;
+// }
+
+// char *conv_pointarr2str(Point kG, int k) {
+// }
 
 int main()
 {
     ZZ_p::init(GF);
     long a = 13, b = 22;
     ECC example = ECC(GF, a, b);
-    if (example.setBasePoint(ZZ(10), ZZ(5)) == 0) {
+    Point G;
+    G.x = ZZ(10);
+    G.y = ZZ(5);
+    if (example.setBasePoint(G) == 0) {
         cout << "set true" << endl;
+        // test the stage n of G(10, 5)
+        for (long i=1; i<=7; ++i) {
+            Point kG = example.mulPoint(i, G);
+            cout << "(" << kG.x << "," << kG.y << ")" << endl;
+        }
+        
+        // char *m = "H";
+        // Point kG[strlen(m)];
+        // convert m string to number
+        // for (int i=0; i<strlen(m); ++i) {
+        //     kG[i] = MulPoint(m[i], example.getBasePoint());
+        // }
+        // conv_pointarr2str(kG, strlen(m));
     } else {
         cout << "set false" << endl;
     }
