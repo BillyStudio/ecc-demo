@@ -109,21 +109,6 @@ ZZ calc_poly(ZZ_pX factors, ZZ x)
 int main()
 {
     ZZ_p::init(GF);
-    ZZ x;
-    ZZ_pX f;
-
-    cin >> f;
-    // for (int i=0; i<f.rep.length(); i++){
-    //     cout << f[i] << endl;
-    // }
-    cin >> x;   // input x mod 23
-    ZZ res = calc_poly(f, x);
-    cout << "result=" << res << endl;
-//    unsigned char *res1 = conv_num2str(a, NumBytes(a));
-//    cout << "Number of bytes: " << NumBytes(a) << endl;
-//    for (int i = 0; i < NumBytes(a); ++i) {
-//        printf("%d", res1[i]);
-//    }
-//    printf("\n");
-   // cout << c << "\n";
+    long a = 13, b = 22;
+    ECC example = ECC(GF, a, b);
 }
