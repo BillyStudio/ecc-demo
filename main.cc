@@ -1,7 +1,10 @@
 #include <NTL/ZZ.h>
+#include <NTL/ZZ_pXFactoring.h>
 
 using namespace std;
 using namespace NTL;
+
+const ZZ GF = ZZ(23);
 
 typedef struct Point {
     ZZ x;
@@ -18,26 +21,6 @@ typedef struct Point {
 void Point::Zero() {
     x = 0;
     y_bit = 0;
-}
-
-ZZ PowerMod(const ZZ& a, const ZZ& e, const ZZ& n)
-{
-   if (e == 0) return ZZ(1);
-
-   long k = NumBits(e);
-
-   ZZ res;
-   res = 1;
-
-   for (long i = k-1; i >= 0; i--) {
-      res = (res*res) % n;
-      if (bit(e, i) == 1) res = (res*a) % n;
-   }
-
-   if (e < 0)
-      return InvMod(res, n);
-   else
-      return res;
 }
 
 Point MulPoint(long k, const Point& G)
@@ -104,16 +87,37 @@ ZZ conv_str2num(unsigned char* str, size_t n_bytes) {
     return res;
 }
 
+ZZ calc_poly(ZZ_pX factors, ZZ x)
+{
+    ZZ res;
+    res = 0;
+
+    for (long i=0; i<factors.rep.length(); i++){
+        ZZ_p item = factors[i];
+        res += item._ZZ_p__rep * PowerMod(x, i, GF);
+    }
+
+    return res;
+}
+
 int main()
 {
-   ZZ a, b, c;
+    ZZ_p::init(GF);
+    ZZ x;
+    ZZ_pX f;
 
-   cin >> a;
-   unsigned char *res1 = conv_num2str(a, NumBytes(a));
-   cout << "Number of bytes: " << NumBytes(a) << endl;
-   for (int i = 0; i < NumBytes(a); ++i) {
-       printf("%d", res1[i]);
-   }
-   printf("\n");
+    cin >> f;
+    // for (int i=0; i<f.rep.length(); i++){
+    //     cout << f[i] << endl;
+    // }
+    cin >> x;   // input x mod 23
+    ZZ res = calc_poly(f, x);
+    cout << "result=" << res << endl;
+//    unsigned char *res1 = conv_num2str(a, NumBytes(a));
+//    cout << "Number of bytes: " << NumBytes(a) << endl;
+//    for (int i = 0; i < NumBytes(a); ++i) {
+//        printf("%d", res1[i]);
+//    }
+//    printf("\n");
    // cout << c << "\n";
 }
