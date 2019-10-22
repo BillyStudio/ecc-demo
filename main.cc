@@ -64,19 +64,20 @@ Point ECC::addPoint(Point A, Point B) {
     ZZ lambda;
 
     if (A.x < B.x) {
-        ZZ inv0 = InvMod(B.x - A.x, GF);
-        cout << "inv=" << inv0 << ",";
-        lambda = (B.y - A.y) * inv0 % GF;
-        cout << "lambda=" << lambda << ",";
+        lambda = (B.y - A.y) * InvMod(B.x - A.x, GF) % GF;
         add_P.x = (lambda*lambda - A.x - B.x) % GF;
         add_P.y = (lambda*(A.x-add_P.x) - A.y) % GF;
-        cout << "(" << add_P.x<<","<<add_P.y<<"),";
-    } else {
-        // assert A.x > B.x
+    } else if (A.x > B.x) {
         lambda = (A.y - B.y) * InvMod(A.x - B.x, GF) % GF;
         add_P.x = (lambda*lambda - B.x - A.x) % GF;
         add_P.y = (lambda*(B.x-add_P.x) - B.y) % GF;
+    } else if (A.y == B.y){    // A.x == B.x, A.y == B.y
+        add_P = doublePoint(A);
+    } else {    // A.x == B.x, (A.y)^2 == (B.y)^2 mod GF
+        add_P.x = 0;
+        add_P.y = 0;
     }
+
     return add_P;
 }
 
@@ -89,25 +90,33 @@ Point ECC::mulPoint(long k, const Point& G)
     if (k == 0) return kG;
     if (k == 1) return G;
 
-    long max_loop = NumBits(k);
-    kG = G;
+    //long max_loop = NumBits(k);
     i = 0;
     while (k>0) {
         if (k&1) {
-            kG = addPoint(kG, dynamic[i]);
+            if (i == 0) {
+                kG = dynamic[i];
+            } else {
+                kG = addPoint(kG, dynamic[i]);
+            }
+            cout << "dynamic["<<i<<"]="<<dynamic[i].x<<","<<dynamic[i].y<<endl;
+            cout << "kG="<<kG.x<<","<<kG.y<<endl;
         }
         k >>= 1;
+        i++;
     }
 
     return kG;
 }
 
 long ECC::findStage() {
-    long stage, base2pow;
+    long stage, base2pow, dp_i;
     Point kG = G;
 
     stage = 1;
-    base2pow = ;
+    base2pow = 2;
+    dynamic[0] = G;
+    dp_i = 1;
     while (kG.y!=0 && kG.x!=0) {
         ++ stage;
         if (kG.x == G.x) {
@@ -120,8 +129,13 @@ long ECC::findStage() {
             kG = addPoint(kG, G);
         }
         cout << kG.x << "," << kG.y << endl;
-        if (stage)
-        if (kG.x == G.x && kG.y == G.y) break;
+        if (stage == base2pow) {
+            dynamic[dp_i++] = kG;
+            base2pow <<= 1;
+        }
+        if (kG.x == G.x && kG.y == G.y) {
+            break;
+        }
     }
     return stage;
 }
@@ -174,14 +188,13 @@ int main()
     G.x = ZZ(10);
     G.y = ZZ(5);
     if (example.setBasePoint(G) == 0) {
-        cout << "set true" << endl;
         // test the stage n of G(10, 5)
         long n = example.findStage();
         cout << "stage=" << n << endl;
-        // for (long i=1; i<=7; ++i) {
-        //     Point kG = example.mulPoint(i, G);
-        //     cout << "(" << kG.x << "," << kG.y << ")" << endl;
-        // }
+        for (long i=1; i<=11; ++i) {
+            Point kG = example.mulPoint(i, G);
+            cout <<i<<"G=(" << kG.x << "," << kG.y << ")" << endl;
+        }
         
         // char *m = "H";
         // Point kG[strlen(m)];
