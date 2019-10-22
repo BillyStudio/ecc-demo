@@ -5,6 +5,11 @@ using namespace NTL;
 
 const NTL::ZZ GF = NTL::ZZ(23);
 
+ostream& operator<< (ostream &output, Point &point) {
+    output<<"("<<point.x<<","<<point.y<<")";
+    return output;
+}
+
 ECC::ECC(long _p, long _a, long _b) : p(_p), a(_a), b(_b) {
     factors.SetMaxLength(4);
     SetCoeff(factors, long(0), _b);
@@ -32,7 +37,6 @@ int ECC::setBasePoint(const Point& base_P) {
 }
 
 bool ECC::checkPoint(const ZZ x, const ZZ y) {
-    cout << "x = " << x << ", f(x)=" << calc_poly(factors, x) << ", y=" << y << endl;
     if (y*y%GF == calc_poly(factors, x))
         return true;
     return false;
@@ -53,7 +57,7 @@ ZZ ECC::calc_poly(ZZ_pX factors, ZZ x)
 Point ECC::doublePoint(const Point& G) {
     Point add_sum;
     ZZ lambda;
-    lambda = (3*G.x*G.x+a) * InvMod(2*G.y, GF) % GF;
+    lambda = (3*G.x*G.x+a) * InvMod((2*G.y)%GF, GF) % GF;
     add_sum.x = (lambda*lambda - 2*G.x) % GF;
     add_sum.y = (lambda * (G.x - add_sum.x) - G.y) % GF; 
     return add_sum;
@@ -63,12 +67,15 @@ Point ECC::addPoint(Point A, Point B) {
     Point add_P;
     ZZ lambda;
 
+    if (A.x==0 && A.y==0) return B;
+    if (B.x==0 && B.y==0) return A;
+
     if (A.x < B.x) {
-        lambda = (B.y - A.y) * InvMod(B.x - A.x, GF) % GF;
+        lambda = (B.y - A.y) * InvMod((B.x-A.x)%GF, GF) % GF;
         add_P.x = (lambda*lambda - A.x - B.x) % GF;
         add_P.y = (lambda*(A.x-add_P.x) - A.y) % GF;
     } else if (A.x > B.x) {
-        lambda = (A.y - B.y) * InvMod(A.x - B.x, GF) % GF;
+        lambda = (A.y - B.y) * InvMod((A.x-B.x)%GF, GF) % GF;
         add_P.x = (lambda*lambda - B.x - A.x) % GF;
         add_P.y = (lambda*(B.x-add_P.x) - B.y) % GF;
     } else if (A.y == B.y){    // A.x == B.x, A.y == B.y
@@ -81,7 +88,7 @@ Point ECC::addPoint(Point A, Point B) {
     return add_P;
 }
 
-Point ECC::mulPoint(long k, const Point& G)
+Point ECC::mulBasePoint(long k)
 {
     Point kG;
     long i;
@@ -99,14 +106,39 @@ Point ECC::mulPoint(long k, const Point& G)
             } else {
                 kG = addPoint(kG, dynamic[i]);
             }
-            cout << "dynamic["<<i<<"]="<<dynamic[i].x<<","<<dynamic[i].y<<endl;
-            cout << "kG="<<kG.x<<","<<kG.y<<endl;
+            // cout << "dynamic["<<i<<"]="<<dynamic[i].x<<","<<dynamic[i].y<<endl;
+            // cout << "kG="<<kG.x<<","<<kG.y<<endl;
         }
         k >>= 1;
         i++;
     }
 
     return kG;
+}
+
+Point ECC::mulPoint(long k, Point P)
+{
+    Point kP, pow2P;
+    long i;
+    bool neg_flag = false;
+    
+    kP.Zero();
+    if (k == 0) return kP;
+    if (k == 1) return P;
+    if (k < 0) {
+        k = -k;
+        neg_flag = true;
+    }
+
+    pow2P = P;
+    while (k>0) {
+        if (k&1) kP = addPoint(kP, pow2P);
+        k >>= 1;
+        pow2P = doublePoint(pow2P);
+    }
+
+    if (neg_flag == true) kP.y = GF-kP.y;
+    return kP;
 }
 
 long ECC::findStage() {
@@ -119,16 +151,8 @@ long ECC::findStage() {
     dp_i = 1;
     while (kG.y!=0 && kG.x!=0) {
         ++ stage;
-        if (kG.x == G.x) {
-            if (kG.y == G.y) {   // same point
-                kG = doublePoint(G);
-            } else {    // opposite roots of y^2 = fx mod p
-                kG = mulPoint(stage, G);
-            }
-        } else {
-            kG = addPoint(kG, G);
-        }
-        cout << kG.x << "," << kG.y << endl;
+        kG = addPoint(kG, G);
+        // cout << kG.x << "," << kG.y << endl;
         if (stage == base2pow) {
             dynamic[dp_i++] = kG;
             base2pow <<= 1;
@@ -182,28 +206,43 @@ int main()
 {
     ZZ_p::init(GF);
     long a = 13, b = 22, l_GF;
+    Point G;
+    long k;
+    std::srand(std::time(nullptr)); // use current time as seed
+
     conv(l_GF, GF);
     ECC example = ECC(l_GF, a, b);
-    Point G;
-    G.x = ZZ(10);
-    G.y = ZZ(5);
+    G.x = 10;
+    G.y = 5;
     if (example.setBasePoint(G) == 0) {
-        // test the stage n of G(10, 5)
+        Point M;
         long n = example.findStage();
-        cout << "stage=" << n << endl;
-        for (long i=1; i<=11; ++i) {
-            Point kG = example.mulPoint(i, G);
-            cout <<i<<"G=(" << kG.x << "," << kG.y << ")" << endl;
-        }
         
-        // char *m = "H";
-        // Point kG[strlen(m)];
-        // convert m string to number
-        // for (int i=0; i<strlen(m); ++i) {
-        //     kG[i] = MulPoint(m[i], example.getBasePoint());
-        // }
-        // conv_pointarr2str(kG, strlen(m));
+        cout << "Alice inputs private key:";
+        cin >> k;
+        k = k % l_GF;
+        Point pubK = example.mulBasePoint(k);
+        cout << "Alice send Bob:(p,a,b,K,G)=("<<l_GF<<",";
+        cout<<a<<",";
+        cout<<b<<",";
+        cout<<pubK<<",",
+        cout << "("<<G.x<<","<<G.y<<") )" << endl;
+        
+        long r;
+        while ((r=rand()%n)==0);
+        cout<<"Bob generate rand r=" << r << endl;
+        cout << "Bob input M.x M.y:";
+        cin >> M.x >> M.y;
+        cout <<"M=" << M << endl;
+        Point C1 = example.addPoint(M, example.mulPoint(r, pubK));
+        cout << "Bob calculates C1 = M+rK = "<< C1 <<endl;
+        Point C2 = example.mulBasePoint(r);
+        cout << "Bob calculates C2 = " << C2 << endl;
+        cout << "Bob sends Alice: (C1,C2)=" << C1<<","<< C2 << endl; 
+        Point M2;
+        M2 = example.addPoint(C1, example.mulPoint(-k, C2));
+        cout << "Alice decrypt M=C1-kC2=" << M2 << endl;
     } else {
-        cout << "set false" << endl;
+        cout << "set base point false" << endl;
     }
 }

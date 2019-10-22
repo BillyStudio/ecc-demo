@@ -9,6 +9,7 @@ typedef struct Point {
     NTL::ZZ x;
     NTL::ZZ y;
     void Zero(){x=0; y=0;}
+    friend std::ostream& operator<< (std::ostream &output, Point &point);
 } Point;
 
 class ECC {
@@ -18,7 +19,9 @@ public:
     int setBasePoint(const NTL::ZZ x, const NTL::ZZ y);
     Point getBasePoint() {return G;};
     
-    Point mulPoint(long k, const Point& G);
+    Point mulBasePoint(long k);
+    Point mulPoint(long k, Point P);
+    Point addPoint(Point, Point);
     long findStage();
     int encrypt(char *);
     int decrypt();
@@ -31,7 +34,6 @@ private:
     ECC();
     bool checkPoint(const NTL::ZZ x, const NTL::ZZ y);
     NTL::ZZ calc_poly(NTL::ZZ_pX factors, NTL::ZZ x);
-    Point addPoint(Point, Point);
     Point doublePoint(const Point&);
 };
 
